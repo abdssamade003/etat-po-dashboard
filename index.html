@@ -486,9 +486,7 @@ text-shadow:0 0 18px #ff1744;
 }
 
 .bar-fill{
-background:
-linear-gradient(90deg,#ff003c,#ff8095)!important;
-box-shadow:0 0 15px #ff003c;
+box-shadow:0 0 15px currentColor;
 }
 
 .reset-btn{
@@ -513,10 +511,55 @@ border-color:#ff1744;
 color:white;
 }
 
+.toast-container{
+  position:fixed;
+  top:20px;
+  right:20px;
+  z-index:9999;
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+  pointer-events:none;
+}
+.toast{
+  min-width:260px;
+  max-width:360px;
+  padding:13px 16px;
+  border-radius:14px;
+  background:linear-gradient(145deg,rgba(20,10,15,.92),rgba(0,0,0,.92));
+  border:1px solid rgba(255,0,60,.4);
+  box-shadow:0 10px 30px rgba(0,0,0,.5),0 0 20px rgba(255,0,60,.15);
+  color:#f4f8ff;
+  font-size:13px;
+  display:flex;
+  align-items:flex-start;
+  gap:10px;
+  backdrop-filter:blur(14px);
+  animation:toastIn .25s ease-out;
+  pointer-events:auto;
+}
+.toast.leaving{animation:toastOut .25s ease-in forwards;}
+.toast .toast-icon{font-size:15px;line-height:1;flex-shrink:0;margin-top:1px;}
+.toast.success{border-color:rgba(95,191,143,.5);}
+.toast.success .toast-icon{color:#5fbf8f;}
+.toast.warn{border-color:rgba(224,176,77,.5);}
+.toast.warn .toast-icon{color:#e0b04d;}
+.toast.error{border-color:rgba(255,23,68,.6);}
+.toast.error .toast-icon{color:#ff1744;}
+.toast-body strong{display:block;margin-bottom:2px;color:#fff;}
+.toast-body span{color:var(--ink-dim);font-size:12px;}
+@keyframes toastIn{from{opacity:0;transform:translateX(30px);}to{opacity:1;transform:translateX(0);}}
+@keyframes toastOut{from{opacity:1;transform:translateX(0);}to{opacity:0;transform:translateX(30px);}}
+@media(max-width:480px){
+  .toast-container{left:12px;right:12px;top:12px;}
+  .toast{min-width:0;max-width:none;}
+}
+
 </style>
 
 </head>
 <body>
+<div class="toast-container" id="toastContainer"></div>
 <div class="wrap">
 
   <header>
@@ -663,6 +706,30 @@ const SHEET_GID = '492987980'; // onglet "ETAT PO"
 const SHEET_CSV_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=${SHEET_GID}`;
 const SYNC_INTERVAL_MS = 60000; // 60s — ajuster selon le besoin
 
+function showToast(message, type, title){
+  const container = document.getElementById('toastContainer');
+  const icons = { success:'✓', warn:'⚠', error:'✕' };
+  const el = document.createElement('div');
+  el.className = 'toast ' + (type || 'success');
+  el.innerHTML = `
+    <span class="toast-icon">${icons[type] || icons.success}</span>
+    <div class="toast-body">
+      ${title ? `<strong>${title}</strong>` : ''}
+      <span>${message}</span>
+    </div>
+  `;
+  container.appendChild(el);
+  setTimeout(() => {
+    el.classList.add('leaving');
+    setTimeout(() => el.remove(), 260);
+  }, 4500);
+}
+
+let lastDataSignature = null;
+function dataSignature(rows){
+  return rows.length + '|' + rows.reduce((s,r)=>s+r.montant,0).toFixed(2);
+}
+
 function setSyncStatus(state, text){
   const dot = document.getElementById('syncDot');
   const label = document.getElementById('syncText');
@@ -721,7 +788,8 @@ function parseSheetCSV(text){
     date: header.findIndex(h => h.includes('DATE')),
     montant: header.findIndex(h => h.includes('TOTAL') || h.includes('TTC')),
     nature: header.findIndex(h => h.includes('NATURE')),
-    piece: header.findIndex(h => h.includes('PIECE') || h.includes('JUSTIFICATIVE'))
+    piece: header.findIndex(h => h.includes('PIECE') || h.includes('JUSTIFICATIVE')),
+    pieceUrl: header.findIndex(h => h.includes('LIEN') || h.includes('URL') || h.includes('LINK'))
   };
   const rows = [];
   for(let i = headerRowIdx + 1; i < table.length; i++){
@@ -737,6 +805,13 @@ function parseSheetCSV(text){
     if(isNaN(montant) || parts.length !== 3) continue;
     const [d,m,y] = parts.map(s=>s.trim());
     const dateNorm = d.padStart(2,'0') + '/' + m.padStart(2,'0') + '/' + y;
+    const rawPiece = (cells[idx.piece] || '').trim();
+    const rawLinkCol = idx.pieceUrl > -1 ? (cells[idx.pieceUrl] || '').trim() : '';
+    // Google Sheets n'exporte que le texte visible d'un lien hypertexte en CSV (ex. "PDF"),
+    // jamais l'URL cible. On n'accepte donc un lien que s'il s'agit d'une vraie URL,
+    // soit dans une colonne dediee (LIEN/URL/LINK), soit directement dans la cellule "piece".
+    const pieceUrl = /^https?:\/\//i.test(rawLinkCol) ? rawLinkCol
+                    : (/^https?:\/\//i.test(rawPiece) ? rawPiece : '');
     rows.push({
       dest,
       facture: (cells[idx.facture] || '').trim(),
@@ -746,7 +821,8 @@ function parseSheetCSV(text){
       dateSort: new Date(+y, +m-1, +d).getTime(),
       montant,
       nature: (cells[idx.nature] || '').trim(),
-      piece: (cells[idx.piece] || '').trim()
+      piece: rawPiece,
+      pieceUrl
     });
   }
   return rows;
@@ -760,15 +836,31 @@ async function syncFromSheet(manual){
     const text = await res.text();
     const rows = parseSheetCSV(text);
     if(!rows.length) throw new Error('Aucune ligne detectee');
+
+    const newSig = dataSignature(rows);
+    const isFirstLoad = lastDataSignature === null;
+    const hasChanged = !isFirstLoad && newSig !== lastDataSignature;
+    const prevCount = DATA.length;
+
     DATA = rows;
     refreshFiltersAndRender();
     const now = new Date();
     const hh = String(now.getHours()).padStart(2,'0');
     const mm = String(now.getMinutes()).padStart(2,'0');
     setSyncStatus('live', `Synchronise avec le Sheet — ${hh}:${mm}`);
+
+    if(hasChanged){
+      const diff = rows.length - prevCount;
+      const diffLabel = diff > 0 ? `+${diff} ligne(s)` : (diff < 0 ? `${diff} ligne(s)` : 'montants modifiés');
+      showToast(diffLabel + ' détecté(s) — tableau et graphiques mis à jour.', 'success', 'Nouvelles données');
+    } else if(manual){
+      showToast('Aucun changement depuis la dernière synchronisation.', 'warn', 'Actualisation');
+    }
+    lastDataSignature = newSig;
   } catch(err){
     console.error('Sync error:', err);
     setSyncStatus('warn', 'Sync impossible — verifier le partage du Sheet');
+    showToast('Impossible de récupérer les données du Sheet. Vérifiez le partage.', 'error', 'Erreur de synchronisation');
   }
 }
 
@@ -874,7 +966,11 @@ function renderTable(rows){
       <td>${r.date}</td>
       <td class="num">${fmtMAD(r.montant)}</td>
       <td><span class="tag">${r.nature}</span></td>
-      <td>${r.piece ? `<a href="javascript:void(0)" onclick="openPDF('${r.piece.replace(/'/g, "\\'")}')" class="pdf-link">📄 PDF</a>` : '<span class="no-file">-</span>'}</td>
+      <td>${
+        r.pieceUrl
+          ? `<a href="javascript:void(0)" onclick="openPDF('${r.pieceUrl.replace(/'/g, "\\'")}')" class="pdf-link">📄 PDF</a>`
+          : (r.piece ? `<span class="tag" title="Lien non disponible via l'export CSV — voir note de configuration">📄 ${r.piece}</span>` : '<span class="no-file">-</span>')
+      }</td>
     `;
     tbody.appendChild(tr);
   });
@@ -1077,7 +1173,7 @@ function renderCharts(rows){
   // Top dest by amount
   const byDest = groupSum(rows,'dest');
   const destEntries = Object.entries(byDest).sort((a,b)=>b[1]-a[1]).slice(0,8);
-  renderBarList('chartDest', destEntries, ()=> '#5fbf8f', fmtMADshort);
+  renderBarList('chartDest', destEntries, i=>palette[(i+3)%palette.length], fmtMADshort);
 
   // Nature count (donut)
   const byNatureCount = groupCount(rows,'nature');
@@ -1171,10 +1267,9 @@ header {
 <script>
 function openPDF(url){
  let match=url.match(/\/d\/([^\/]+)/);
- if(match){
-  document.getElementById('pdfViewer').src='https://drive.google.com/file/d/'+match[1]+'/preview';
-  document.getElementById('pdfModal').style.display='flex';
- }
+ const src = match ? 'https://drive.google.com/file/d/'+match[1]+'/preview' : url;
+ document.getElementById('pdfViewer').src=src;
+ document.getElementById('pdfModal').style.display='flex';
 }
 function closePDF(){
  document.getElementById('pdfModal').style.display='none';
