@@ -421,14 +421,7 @@ header,
   box-shadow: var(--glass-shadow);
   position: relative;
 }
-/* fine top highlight, like real glass catching light */
-header::before, .kpi::before, .panel::before, .table-panel::before{
-  content:'';
-  position:absolute; inset:0;
-  border-radius:inherit;
-  background:linear-gradient(180deg, rgba(255,255,255,.55), transparent 45%);
-  pointer-events:none;
-}
+/* top highlight removed per request (was causing a white glare band over panels) */
 
 header{
   padding:24px 30px;
@@ -1523,8 +1516,7 @@ function applyTheme(theme){
 function initTheme(){
   let saved = null;
   try{ saved = localStorage.getItem('etatpo-theme'); }catch(e){ /* stockage indisponible */ }
-  const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-  applyTheme(saved || (prefersDark ? 'dark' : 'light'));
+  applyTheme(saved === 'dark' ? 'dark' : 'light');
 }
 document.getElementById('themeToggleBtn').addEventListener('click', ()=>{
   const current = document.documentElement.getAttribute('data-theme') || 'light';
