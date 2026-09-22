@@ -1137,7 +1137,7 @@ function parseSheetCSV(text){
 }
 
 async function syncFromSheet(manual){
-  setSyncStatus('warn', manual ? 'Actualisation…' : 'Connexion au Sheet…');
+  setSyncStatus('warn', manual ? 'Actualisation…' : 'Update DATA…');
   try{
     const res = await fetch(SHEET_CSV_URL, { cache: 'no-store' });
     if(!res.ok) throw new Error('HTTP ' + res.status);
