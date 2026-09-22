@@ -4,6 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>ETAT PO — Tableau de bord</title>
+<link rel="icon" type="image/png" href="Dongfeng-Logo.png">
+<link rel="apple-touch-icon" href="Dongfeng-Logo.png">
 <style>
   :root{
     --bg: #0f1512;
@@ -814,8 +816,8 @@ display:block;
 /* ===== Header Logo (soft glow, light theme) ===== */
 
 .logo-neon{
-    width:72px !important;
-    height:72px !important;
+    width:104px !important;
+    height:104px !important;
     object-fit:contain;
     filter:
       drop-shadow(0 0 4px rgba(232,68,42,.35))
@@ -854,8 +856,8 @@ display:block;
     position:absolute;
     left:-15px;
     top:50%;
-    width:100px;
-    height:100px;
+    width:132px;
+    height:132px;
     transform:translateY(-50%);
     background:radial-gradient(
         circle,
@@ -870,6 +872,22 @@ display:block;
 .brand-mark div{
     position:relative;
     z-index:1;
+}
+
+/* Responsive logo sizing */
+@media (max-width:768px){
+    header{padding:18px 20px;}
+    .brand-mark{gap:12px;}
+    .logo-neon{
+        width:78px !important;
+        height:78px !important;
+    }
+    .brand-mark:before{
+        width:100px;
+        height:100px;
+    }
+    h1{font-size:27px;}
+    .brand-tag{font-size:11px;}
 }
 </style>
 
