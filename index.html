@@ -1354,10 +1354,10 @@ let DATA = RAW.map(r => ({
 // PREREQUIS : le Google Sheet doit etre partage en "Anyone with the link: Viewer"
 // (ou publie via Fichier > Partager > Publier sur le Web) pour que ce fetch fonctionne
 // depuis un domaine exterieur a Google/Claude.
-const SHEET_ID = '1zi5CGBuf7fvYj-Jq0BTdxe01C8dUZeE5uGH4fdxd3dw';
-const SHEET_GID = '492987980'; // onglet "ETAT PO"
+const SHEET_ID = '1zvQB81JHS2D9eQwhffFADB9YOP8BmdFq8clp8w8kLo4';
+const SHEET_GID = '0'; // onglet "ETAT PO"
 const SHEET_CSV_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=${SHEET_GID}`;
-const SYNC_INTERVAL_MS = 10000; // 60s — ajuster selon le besoin
+const SYNC_INTERVAL_MS = 50000; // 60s — ajuster selon le besoin
 
 function showToast(message, type, title){
   const container = document.getElementById('toastContainer');
