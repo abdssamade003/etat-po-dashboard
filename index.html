@@ -1357,7 +1357,7 @@ let DATA = RAW.map(r => ({
 const SHEET_ID = '1zvQB81JHS2D9eQwhffFADB9YOP8BmdFq8clp8w8kLo4';
 const SHEET_GID = '0'; // onglet "ETAT PO"
 const SHEET_CSV_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=${SHEET_GID}`;
-const SYNC_INTERVAL_MS = 50000; // 60s — ajuster selon le besoin
+const SYNC_INTERVAL_MS = 5000; // 60s — ajuster selon le besoin
 
 function showToast(message, type, title){
   const container = document.getElementById('toastContainer');
