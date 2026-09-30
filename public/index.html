@@ -2628,5 +2628,20 @@ sync();attach();
 })();
 
 </script>
+<script id="df-sidebar-auto-collapse">
+(function(){
+ let lastPage=state.page;
+ const baseNavigation=navigation;
+ navigation=function(){
+  if(state.page!==lastPage){lastPage=state.page;setSidebar(true);}
+  return baseNavigation.apply(this,arguments);
+ };
+ // Re-selecting the current section also collapses an expanded menu.
+ document.getElementById('nav')?.addEventListener('click',event=>{
+  if(event.target.closest('button[data-page]'))setSidebar(true);
+ });
+ setSidebar(true);
+})();
+</script>
 </body>
 </html>
