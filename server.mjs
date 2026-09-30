@@ -105,7 +105,8 @@ export function createApp(env=process.env,fetcher=fetch){
         }finally{busy--;}
       }
       if(req.method!=='GET'&&req.method!=='HEAD')return send(405,{error:'method_not_allowed'});
-      if(!['/','/index.html'].includes(path))return send(404,{error:'not_found'});
+      const pagePath=path.toLowerCase().replace(/\/+$/,'')||'/';
+      if(!['/','/index.html','/accueil','/home','/recherche','/search','/catalogue','/rapport','/report','/po','/chat'].includes(pagePath))return send(404,{error:'not_found'});
       const html=await readFile(new URL('./public/index.html',import.meta.url));
       res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-cache','X-Content-Type-Options':'nosniff','Referrer-Policy':'strict-origin-when-cross-origin'});res.end(req.method==='HEAD'?undefined:html);
     }catch(e){if(!res.writableEnded&&!res.destroyed)send(e.status||503,{error:e.status?e.message:'service_unavailable'});}

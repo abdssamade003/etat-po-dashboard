@@ -2596,5 +2596,37 @@ sync();attach();
 })();
 
 </script>
+<script id="df-page-routes">
+(function(){
+ 'use strict';
+ if(!/^https?:$/.test(location.protocol))return;
+ const routes={'/':'Accueil','/recherche':'Recherche','/catalogue':'Catalogue','/rapport':'Rapport','/po':'PO','/chat':'Chat'};
+ const aliases={'/index.html':'/','/accueil':'/','/home':'/','/search':'/recherche','/report':'/rapport'};
+ const paths=Object.fromEntries(Object.entries(routes).map(([path,page])=>[page,path]));
+ const clean=path=>path.toLowerCase().replace(/\/+$/,'')||'/';
+ let restoring=false;
+ function syncURL(){
+  const path=paths[state.page];if(!path||restoring)return;
+  if(clean(location.pathname)!==path)history.pushState({dfPage:state.page},'',path);
+ }
+ const previous=navigation;
+ navigation=function(){const result=previous.apply(this,arguments);syncURL();return result;};
+ function restore(initial=false){
+  const incoming=clean(location.pathname),path=aliases[incoming]||incoming,page=routes[path];if(!page)return;
+  restoring=true;
+  try{
+   clearTimeout(timer);controller?.abort();hideSuggestions();
+   Object.assign(state,{page,review:false,stockOnly:false,cross:page!=='Catalogue',catalogueStage:'entry',query:'',model:'',category:'',offset:0,partFilter:''});
+   const search=document.getElementById('search');if(search)search.value='';
+   if(location.pathname!==path)history.replaceState({dfPage:page},'',path+location.search+location.hash);
+   // Use the existing navigation/load chain so PO and report access gates remain intact.
+   if(state.metadata)load();else navigation();
+  }finally{restoring=false;}
+ }
+ window.addEventListener('popstate',()=>restore());
+ restore(true);
+})();
+
+</script>
 </body>
 </html>
