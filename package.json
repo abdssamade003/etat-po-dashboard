@@ -1,7 +1,0 @@
-{
-  "name": "dongfeng-parts-assistant",
-  "private": true,
-  "type": "module",
-  "scripts": { "start": "node server.mjs", "test": "node --test server.test.mjs" },
-  "engines": { "node": ">=22" }
-}
